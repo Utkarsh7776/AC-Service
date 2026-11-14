@@ -16,45 +16,18 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
+import { useUser } from '@/lib/UserContext';
+
 export default function Sidebar({ children }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading, logout: handleLogout } = useUser();
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  // Fetch current user details
-  const fetchUser = async () => {
-    try {
-      const res = await fetch('/api/auth/me');
-      const data = await res.json();
-      setUser(data.user || null);
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUser();
-  }, [pathname]);
 
   // Close mobile drawer on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      setUser(null);
-      router.push('/login');
-      router.refresh();
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
-  };
 
   // If user is loading, show clean loader
   if (loading) {

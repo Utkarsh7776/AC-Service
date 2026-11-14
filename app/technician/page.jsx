@@ -10,6 +10,8 @@ import {
   Hash, Wrench, FileText,
 } from 'lucide-react';
 import PhotoModal from '../dashboard/PhotoModal';
+import LiveCameraModal from '@/components/LiveCameraModal';
+import { useUser } from '@/lib/UserContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CLIENTS = [
@@ -36,32 +38,116 @@ const BRANCH_MAP = {
   Other:            ['Main Branch', 'Branch 1', 'Custom Location'],
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-function PhotoPreview({ label, file, onClear, icon }) {
+// ─── Interactive Photo Capture Field (Mobile Optimized) ──────────────────────
+function PhotoCaptureField({
+  id,
+  label,
+  file,
+  onFileSelect,
+  onClear,
+  onOpenLiveCamera,
+  icon,
+  isLoading,
+}) {
   const preview = file ? URL.createObjectURL(file) : null;
+  const galleryInputId = `${id}_gallery`;
+
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className="form-label flex items-center gap-1.5">{icon}{label}</span>
-      <div className="relative upload-box min-h-[140px] overflow-hidden">
-        {preview ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview} alt={label} className="w-full h-40 object-cover rounded-lg" />
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <span className="form-label flex items-center gap-1.5 font-semibold text-slate-800 text-xs">
+          {icon}
+          {label}
+        </span>
+        {file && (
+          <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Captured
+          </span>
+        )}
+      </div>
+
+      {preview ? (
+        <div className="relative rounded-2xl overflow-hidden border border-emerald-200 bg-emerald-50/20 shadow-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={preview} alt={label} className="w-full h-44 object-cover" />
+          <div className="p-2.5 bg-white/95 backdrop-blur-sm border-t border-slate-100 flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold text-slate-700 truncate">{file.name || 'Photo captured'}</p>
+              <p className="text-[10px] text-slate-400">{(file.size / 1024).toFixed(0)} KB &bull; Verified</p>
+            </div>
             <button
               type="button"
               onClick={onClear}
-              className="absolute top-2 right-2 w-7 h-7 bg-slate-900/70 text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors shadow"
+              disabled={isLoading}
+              className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2.5 py-1 rounded-lg hover:bg-rose-50 border border-rose-200 flex items-center gap-1 transition"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3.5 h-3.5" /> Remove
             </button>
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-1 text-slate-400 py-4">
-            <Camera className="w-8 h-8 opacity-60" />
-            <span className="text-xs font-medium">Tap to open camera or upload</span>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {/* Primary Clickable Upload Area (Tapping opens camera directly on mobile) */}
+          <label
+            htmlFor={id}
+            className="border-2 border-dashed border-sky-300 hover:border-sky-500 bg-gradient-to-b from-sky-50/50 to-white hover:bg-sky-50 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.99] shadow-sm min-h-[140px] text-center"
+          >
+            <input
+              id={id}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              disabled={isLoading}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) onFileSelect(f);
+                e.target.value = '';
+              }}
+            />
+            <div className="w-12 h-12 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center shadow-inner">
+              <Camera className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-800">Tap to Open Camera</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Launches phone camera or photo picker</p>
+            </div>
+          </label>
+
+          {/* Dual Action Buttons: Live In-App Viewfinder + Gallery */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onOpenLiveCamera}
+              disabled={isLoading}
+              className="py-2 px-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-semibold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
+            >
+              <Camera className="w-3.5 h-3.5 shrink-0" />
+              <span>Live Viewfinder</span>
+            </button>
+
+            <label
+              htmlFor={galleryInputId}
+              className="py-2 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold flex items-center justify-center gap-1.5 border border-slate-200 cursor-pointer active:scale-95 transition text-center"
+            >
+              <input
+                id={galleryInputId}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                disabled={isLoading}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) onFileSelect(f);
+                  e.target.value = '';
+                }}
+              />
+              <Upload className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+              <span>Gallery / File</span>
+            </label>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -70,9 +156,8 @@ function PhotoPreview({ label, file, onClear, icon }) {
 export default function TechnicianPage() {
   const router = useRouter();
 
-  // Auth state
-  const [currentUser, setCurrentUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  // Auth state from centralized UserContext (prevents duplicate /api/auth/me calls)
+  const { user: currentUser, loading: authLoading } = useUser();
 
   // Form state (notice technicianName is locked to currentUser.name)
   const [form, setForm] = useState({
@@ -86,6 +171,7 @@ export default function TechnicianPage() {
 
   const [indoorPhoto,  setIndoorPhoto]  = useState(null);
   const [outdoorPhoto, setOutdoorPhoto] = useState(null);
+  const [liveCameraTarget, setLiveCameraTarget] = useState(null); // 'indoor' | 'outdoor' | null
   const [status, setStatus] = useState('idle'); // idle | loading | success | error
   const [errorMsg, setErrorMsg] = useState('');
   const [geoStatus, setGeoStatus] = useState('idle'); // idle | loading | done | denied
@@ -93,29 +179,8 @@ export default function TechnicianPage() {
   const [lastSubmittedVisit, setLastSubmittedVisit] = useState(null);
   const [dynamicClients, setDynamicClients] = useState([]);
 
-  const indoorInputRef  = useRef(null);
-  const outdoorInputRef = useRef(null);
-
-  // ── Fetch current user on mount ─────────────────────────────────────────────
+  // ── Fetch dynamic clients on mount (once) ──────────────────────────────────
   useEffect(() => {
-    async function checkAuth() {
-      try {
-        const res = await fetch('/api/auth/me');
-        const data = await res.json();
-        if (data.user) {
-          setCurrentUser(data.user);
-        } else {
-          setCurrentUser(null);
-        }
-      } catch {
-        setCurrentUser(null);
-      } finally {
-        setAuthLoading(false);
-      }
-    }
-    checkAuth();
-
-    // Fetch dynamic clients
     async function loadClients() {
       try {
         const res = await fetch('/api/clients');
@@ -586,76 +651,28 @@ export default function TechnicianPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Indoor Photo */}
-              <div>
-                <PhotoPreview
-                  label="Indoor Unit Photo"
-                  file={indoorPhoto}
-                  onClear={() => {
-                    setIndoorPhoto(null);
-                    if (indoorInputRef.current) indoorInputRef.current.value = '';
-                  }}
-                  icon={<span className="text-sm">🏠</span>}
-                />
-                <input
-                  ref={indoorInputRef}
-                  id="indoorPhotoInput"
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) setIndoorPhoto(file);
-                  }}
-                  disabled={isLoading}
-                />
-                {!indoorPhoto && (
-                  <button
-                    type="button"
-                    onClick={() => indoorInputRef.current?.click()}
-                    disabled={isLoading}
-                    className="btn-secondary w-full mt-2 text-xs py-2 flex items-center justify-center gap-1.5"
-                  >
-                    <Camera className="w-3.5 h-3.5" /> Capture Indoor Photo
-                  </button>
-                )}
-              </div>
+              <PhotoCaptureField
+                id="indoorPhotoInput"
+                label="Indoor Unit Photo"
+                file={indoorPhoto}
+                onFileSelect={(file) => setIndoorPhoto(file)}
+                onClear={() => setIndoorPhoto(null)}
+                onOpenLiveCamera={() => setLiveCameraTarget('indoor')}
+                icon={<span className="text-sm">🏠</span>}
+                isLoading={isLoading}
+              />
 
               {/* Outdoor Photo */}
-              <div>
-                <PhotoPreview
-                  label="Outdoor Unit Photo"
-                  file={outdoorPhoto}
-                  onClear={() => {
-                    setOutdoorPhoto(null);
-                    if (outdoorInputRef.current) outdoorInputRef.current.value = '';
-                  }}
-                  icon={<span className="text-sm">🌿</span>}
-                />
-                <input
-                  ref={outdoorInputRef}
-                  id="outdoorPhotoInput"
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) setOutdoorPhoto(file);
-                  }}
-                  disabled={isLoading}
-                />
-                {!outdoorPhoto && (
-                  <button
-                    type="button"
-                    onClick={() => outdoorInputRef.current?.click()}
-                    disabled={isLoading}
-                    className="btn-secondary w-full mt-2 text-xs py-2 flex items-center justify-center gap-1.5"
-                  >
-                    <Camera className="w-3.5 h-3.5" /> Capture Outdoor Photo
-                  </button>
-                )}
-              </div>
+              <PhotoCaptureField
+                id="outdoorPhotoInput"
+                label="Outdoor Unit Photo"
+                file={outdoorPhoto}
+                onFileSelect={(file) => setOutdoorPhoto(file)}
+                onClear={() => setOutdoorPhoto(null)}
+                onOpenLiveCamera={() => setLiveCameraTarget('outdoor')}
+                icon={<span className="text-sm">🌿</span>}
+                isLoading={isLoading}
+              />
             </div>
           </div>
 
@@ -732,6 +749,21 @@ export default function TechnicianPage() {
           </p>
         </div>
       </div>
+
+      {/* ── Live In-App Camera Viewfinder Modal ── */}
+      <LiveCameraModal
+        isOpen={Boolean(liveCameraTarget)}
+        onClose={() => setLiveCameraTarget(null)}
+        title={liveCameraTarget === 'indoor' ? 'Capture Indoor Unit Photo' : 'Capture Outdoor Unit Photo'}
+        onCapture={(file) => {
+          if (liveCameraTarget === 'indoor') {
+            setIndoorPhoto(file);
+          } else if (liveCameraTarget === 'outdoor') {
+            setOutdoorPhoto(file);
+          }
+          setLiveCameraTarget(null);
+        }}
+      />
     </div>
   );
 }

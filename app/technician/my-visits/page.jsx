@@ -7,6 +7,7 @@ import {
   Building2, Thermometer, CheckCircle2, Loader2, X, SlidersHorizontal,
 } from 'lucide-react';
 import PhotoModal from '../../dashboard/PhotoModal';
+import { useUser } from '@/lib/UserContext';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -31,9 +32,8 @@ const AC_TYPES = ['Ducted AC', 'Cassette AC', 'Split AC', 'VRV System'];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function MyVisitsPage() {
-  // ── Auth ──────────────────────────────────────────────────────────────────
-  const [currentUser, setCurrentUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  // ── Auth from shared UserContext (no duplicate /api/auth/me call) ───────────
+  const { user: currentUser, loading: authLoading } = useUser();
 
   // ── All visits data ───────────────────────────────────────────────────────
   const [allVisits, setAllVisits] = useState([]);
@@ -46,22 +46,6 @@ export default function MyVisitsPage() {
   const [filterBranch, setFilterBranch] = useState('');
   const [filterAcType, setFilterAcType] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-
-  // ── Fetch auth on mount ───────────────────────────────────────────────────
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        const res = await fetch('/api/auth/me');
-        const data = await res.json();
-        setCurrentUser(data.user || null);
-      } catch {
-        setCurrentUser(null);
-      } finally {
-        setAuthLoading(false);
-      }
-    }
-    checkAuth();
-  }, []);
 
   // ── Fetch visits once user is known ──────────────────────────────────────
   const fetchVisits = useCallback(async (user) => {

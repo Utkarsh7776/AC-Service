@@ -70,11 +70,11 @@ export default function TechnicianTracker({ initialTechnicians = [], onRefresh }
   };
 
   // Initial load of first technician flow if available
-  useState(() => {
-    if (initialTechnicians.length > 0) {
+  useEffect(() => {
+    if (initialTechnicians && initialTechnicians.length > 0 && !selectedTechId) {
       handleSelectTech(initialTechnicians[0].id);
     }
-  });
+  }, []);
 
   // Reload technicians list
   const refreshTechnicians = async () => {
